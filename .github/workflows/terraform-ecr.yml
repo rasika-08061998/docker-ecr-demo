@@ -9,16 +9,17 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
+  IMAGE_TAG: latest
 
 jobs:
-  terraform:
+  terraform-and-docker:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials via OIDC
+      - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::528757804354:role/GitHubActionsECRRole
@@ -29,11 +30,43 @@ jobs:
         with:
           terraform_version: 1.6.6
 
+      # -----------------------------
+      # Terraform: Init + Apply
+      # -----------------------------
       - name: Terraform Init
         run: terraform -chdir=terraform-ecr init
 
       - name: Terraform Apply
         run: terraform -chdir=terraform-ecr apply -auto-approve
 
-      - name: Terraform Output
-        run: terraform -chdir=terraform-ecr output
+      # -----------------------------
+      # Read ECR repo URL from Terraform
+      # -----------------------------
+      - name: Read Terraform Outputs
+        id: tf_outputs
+        run: |
+          ECR_REPO_URL=$(terraform -chdir=terraform-ecr output -raw ecr_repository_url)
+          echo "ECR_REPO_URL=$ECR_REPO_URL"
+          echo "ECR_REPO_URL=$ECR_REPO_URL" >> $GITHUB_ENV
+
+      # -----------------------------
+      # Login to Amazon ECR
+      # -----------------------------
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION \
+          | docker login \
+            --username AWS \
+            --password-stdin $ECR_REPO_URL
+
+      # -----------------------------
+      # Docker Build & Push
+      # -----------------------------
+      - name: Build Docker Image
+        run: |
+          docker build -t $ECR_REPO_URL:$IMAGE_TAG .
+
+      - name: Push Docker Image to ECR
+        run: |
+          docker push $ECR_REPO_URL:$IMAGE_TAG
+
