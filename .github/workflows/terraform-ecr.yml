@@ -37,3 +37,4 @@ jobs:
 
       - name: Read Terraform Outputs
         run: terraform output
+        working-directory: terraform-ecr
