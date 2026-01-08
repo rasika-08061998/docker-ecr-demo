@@ -1,0 +1,1 @@
+print("Hello! Docker image pushed to ECR successfully.")
