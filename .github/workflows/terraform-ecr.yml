@@ -28,13 +28,17 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
-        run: terraform init
-        working-directory: terraform-ecr
+        run: |
+          cd terraform-ecr
+          terraform init
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
-        working-directory: terraform-ecr
+        run: |
+          cd terraform-ecr
+          terraform apply -auto-approve
 
       - name: Read Terraform Outputs
-        run: terraform output
-        working-directory: terraform-ecr
+        run: |
+          cd terraform-ecr
+          terraform output
+
